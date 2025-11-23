@@ -50,4 +50,14 @@ public class LinkedBoundedBuffer<T> implements BlockingBuffer<T> {
             lock.unlock();
         }
     }
+
+    @Override
+    public int size() {
+        lock.lock();
+        try {
+            return queue.size();
+        } finally {
+            lock.unlock();
+        }
+    }
 }

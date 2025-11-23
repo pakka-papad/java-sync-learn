@@ -43,4 +43,9 @@ public class CircularBoundedBuffer<T> implements BlockingBuffer<T> {
         notifyAll();
         return res;
     }
+
+    @Override
+    public synchronized int size() {
+        return count;
+    }
 }
