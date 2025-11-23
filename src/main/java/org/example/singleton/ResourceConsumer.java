@@ -108,7 +108,7 @@ public abstract class ResourceConsumer {
         }
 
         /**
-         * The ResourceHolder.INSTANCE inside the private constructor will create the instance and the condition will
+         * <b>Q</b>: The ResourceHolder.INSTANCE inside the private constructor will create the instance and the condition will
          * always be true. How does the check work? <br>
          * <br>
          * 1. <b>Class Initialization is Synchronized and Happens Only Once</b>:
@@ -135,7 +135,6 @@ public abstract class ResourceConsumer {
          *    and an `IllegalStateException` is thrown, blocking the attack.
          */
         private InnerStaticClass() {
-            // This check prevents instantiation via reflection.
             if (ResourceHolder.INSTANCE != null) {
                 throw new IllegalStateException("Singleton already constructed. Use getInstance() method.");
             }
