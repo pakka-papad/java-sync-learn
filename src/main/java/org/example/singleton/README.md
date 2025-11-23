@@ -48,3 +48,39 @@ private class MySingleton() {
 
 - **Vulnerable:** Eager Initialization, Synchronized Method, Double-Checked Locking, and the Bill Pugh (Inner Static Class) method are all vulnerable and require the constructor check mentioned above for full protection.
 - **Immune:** The **Enum Singleton** pattern is inherently immune to reflection attacks. The JVM itself guarantees that enums cannot be instantiated via reflection, making it the most robust pattern against this specific threat.
+
+---
+### Serialization Concerns
+
+Serialization is the process of converting an object's state into a byte stream, and deserialization is the reverse process. It's often used for persistence or inter-process communication.
+
+#### How Serialization Breaks the Singleton Pattern
+
+When a singleton object is serialized and then deserialized, the `readObject()` method used during deserialization will, by default, **always create a new instance** of the class from the byte stream. This new instance is created without invoking the `getInstance()` method, bypassing the singleton's control mechanisms. As a result, you end up with two distinct instances of your singleton in the application (the original one and the newly deserialized one), breaking the singleton guarantee.
+
+#### How to Prevent It: The `readResolve()` Method
+
+The Java Serialization API provides a special hook method, `private Object readResolve()`, to address this problem. If a `Serializable` class defines this method:
+1. The JVM first creates a new instance during deserialization.
+2. Immediately after this, it calls the `readResolve()` method on that newly created instance.
+3. The object **returned by `readResolve()`** is then used as the final result of the deserialization process, and the newly created (but unwanted) instance from step 1 is discarded.
+
+To protect your singleton, you implement `readResolve()` to simply return your single, true instance:
+
+```java
+public class MySingleton implements java.io.Serializable {
+    // ... singleton implementation with getInstance() ...
+
+    // This method is called during deserialization
+    private Object readResolve() {
+        // Return the one true instance and let the garbage collector
+        // take care of the object just created during deserialization.
+        return getInstance();
+    }
+}
+```
+
+#### Which Patterns are Vulnerable?
+
+- **Vulnerable:** All patterns (Eager Initialization, Synchronized Method, Double-Checked Locking, and the Bill Pugh (Inner Static Class) method) are vulnerable if they implement `java.io.Serializable`. They require the `readResolve()` method to maintain their singleton property upon deserialization.
+- **Immune:** The **Enum Singleton** pattern is inherently immune to serialization issues. The Java specification guarantees that the serialization and deserialization of enum constants will never create new instances, handling this automatically.
