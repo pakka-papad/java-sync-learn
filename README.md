@@ -2,6 +2,12 @@
 
 This repository contains toy implementations for classic synchronization problems in Java. It's intended as a learning resource to explore and understand different concurrency and synchronization techniques.
 
+## Contents
+- [1. Thread-Safe Bounded Buffer (Producer-Consumer)](#1-thread-safe-bounded-buffer-producer-consumer)
+- [2. Thread-Safe Singleton](#2-thread-safe-singleton)
+- [3. Semaphore-based Resource Pool](#3-semaphore-based-resource-pool)
+
+
 ---
 
 ## 1. Thread-Safe Bounded Buffer (Producer-Consumer)
