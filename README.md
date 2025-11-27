@@ -71,3 +71,30 @@ Implement various thread-safe singleton patterns and understand their trade-offs
 #### e. Enum Singleton (`ResourceSingleEnum`)
 - **Pros**: The most concise and robust approach. Inherently thread-safe, serialization-safe, and reflection-proof, all guaranteed by the JVM.
 - **Cons**: Eager initialization (instance is created when the enum class is loaded). Less flexible, as enums cannot extend other classes.
+
+---
+
+## 3. Semaphore-based Resource Pool
+
+Implementation: [`src/main/java/org/example/resourcepool`](./src/main/java/org/example/resourcepool)
+
+Implement a generic, thread-safe resource pool using a `Semaphore` to control access. This is a common pattern for managing a limited number of resources like database connections or expensive objects.
+
+### Requirements
+- Fixed pool size
+- Acquire/release resources
+- Block when no resources are available
+- Support a timeout when acquiring a resource
+- Handle resource validation upon release
+- Track the number of available resources
+
+### Key Concepts
+- Resource Pooling
+- `java.util.concurrent.Semaphore` for controlling access
+- Timeout Handling
+
+### Implementations
+
+#### a. `BlockingResourcePool.java`
+- **Technique**: Uses a `java.util.concurrent.Semaphore` to manage a fixed number of permits, corresponding to the available resources.
+- **Description**: A generic implementation that holds resources in a `ConcurrentLinkedQueue`. The `Semaphore` controls blocking and unblocking of threads trying to acquire resources. This is more efficient and straightforward for pool-like structures than using `wait()`/`notify()` because the semaphore handles the "counting" of available resources internally.
