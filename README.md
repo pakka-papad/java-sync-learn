@@ -6,6 +6,7 @@ This repository contains toy implementations for classic synchronization problem
 - [1. Thread-Safe Bounded Buffer (Producer-Consumer)](#1-thread-safe-bounded-buffer-producer-consumer)
 - [2. Thread-Safe Singleton](#2-thread-safe-singleton)
 - [3. Semaphore-based Resource Pool](#3-semaphore-based-resource-pool)
+- [4. CountDownLatch Alternative](#4-countdownlatch-alternative)
 
 
 ---
@@ -104,3 +105,31 @@ Implement a generic, thread-safe resource pool using a `Semaphore` to control ac
 #### a. `BlockingResourcePool.java`
 - **Technique**: Uses a `java.util.concurrent.Semaphore` to manage a fixed number of permits, corresponding to the available resources.
 - **Description**: A generic implementation that holds resources in a `ConcurrentLinkedQueue`. The `Semaphore` controls blocking and unblocking of threads trying to acquire resources. This is more efficient and straightforward for pool-like structures than using `wait()`/`notify()` because the semaphore handles the "counting" of available resources internally.
+
+---
+
+## 4. CountDownLatch Alternative
+
+Implementation: [`src/main/java/org/example/countdownlatch`](./src/main/java/org/example/countdownlatch)
+
+Implement a mechanism similar to CountDownLatch using other primitives (no using CountDownLatch itself).
+
+### Requirements
+- Count down from N to 0
+- Threads can wait for count to reach 0
+- Once zero, cannot be reset (unlike CyclicBarrier)
+- Use synchronized/wait/notify or Lock/Condition
+
+### Key Concepts
+- Coordination
+- Latches
+- Thread signaling
+- `java.util.concurrent.locks.ReentrantLock`
+- `java.util.concurrent.locks.Condition`
+- `volatile` keyword for performance optimization
+
+### Implementations
+
+#### a. `AltCDLatch.java`
+- **Technique**: Uses `java.util.concurrent.locks.ReentrantLock` with `Condition` variables and `volatile` for the count.
+- **Description**: An alternative implementation of a CountDownLatch. It provides `await()` methods for threads to wait until the count reaches zero, and a `countDown()` method to decrement the count. The `volatile` keyword on the count field, combined with `ReentrantLock` and `Condition` variables, ensures correct synchronization and enables a fast-path check for performance.
