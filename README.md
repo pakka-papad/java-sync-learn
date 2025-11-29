@@ -7,6 +7,7 @@ This repository contains toy implementations for classic synchronization problem
 - [2. Thread-Safe Singleton](#2-thread-safe-singleton)
 - [3. Semaphore-based Resource Pool](#3-semaphore-based-resource-pool)
 - [4. CountDownLatch Alternative](#4-countdownlatch-alternative)
+- [5. Copy-On-Write List](#5-copy-on-write-list)
 
 
 ---
@@ -133,3 +134,32 @@ Implement a mechanism similar to CountDownLatch using other primitives (no using
 #### a. `AltCDLatch.java`
 - **Technique**: Uses `java.util.concurrent.locks.ReentrantLock` with `Condition` variables and `volatile` for the count.
 - **Description**: An alternative implementation of a CountDownLatch. It provides `await()` methods for threads to wait until the count reaches zero, and a `countDown()` method to decrement the count. The `volatile` keyword on the count field, combined with `ReentrantLock` and `Condition` variables, ensures correct synchronization and enables a fast-path check for performance.
+
+---
+
+## 5. Copy-On-Write List
+
+Implementation: [`src/main/java/org/example/cowlist`](./src/main/java/org/example/cowlist)
+
+Implement a simplified version of `java.util.concurrent.CopyOnWriteArrayList`. This data structure is useful for read-heavy scenarios where the number of reads and iterations vastly outnumbers writes.
+
+### Requirements
+- Thread-safe reads without locking
+- Copy array on every write operation
+- Support `add`, `remove`, `get`, and `iterator`
+- Iterator is a "snapshot" and never throws `ConcurrentModificationException`
+
+### Key Concepts
+- Copy-on-write
+- Snapshot iteration
+- Immutability
+- Read-heavy workloads
+- `volatile` keyword
+
+### Implementations
+
+#### a. `CoWList.java`
+- **Technique**: Uses a `volatile` array for the underlying data. Write operations (`add`, `remove`) are synchronized and create a full copy of the array. Read operations (`get`, `iterator`) are lock-free and operate on the current `volatile` snapshot of the array.
+- **Trade-offs**:
+    - **Pros**: Excellent for read-heavy workloads. Iteration is fast and completely safe from `ConcurrentModificationException`. Reads do not require any locking.
+    - **Cons**: Writes are very expensive due to copying the entire array. This makes it unsuitable for write-heavy or even moderately write-intensive scenarios. High memory consumption if the list is large and modified often.

@@ -326,4 +326,60 @@ public class CoWListTest {
             threads.get(i).join();
         }
     }
+
+    @Test
+    @Timeout(5)
+    void testConcurrentIterator() throws InterruptedException {
+        // Given
+        var list = new CoWList<Integer>();
+        int initialCount = 5;
+        for (int i = 0; i < initialCount; i++) {
+            list.add(i);
+        }
+        List<Integer> expectedIteratedElements = new ArrayList<>();
+        for (int i = 0; i < initialCount; i++) {
+            expectedIteratedElements.add(i);
+        }
+
+        // When
+        var it = list.iterator();
+
+        CountDownLatch startModifier = new CountDownLatch(1);
+        CountDownLatch iterationComplete = new CountDownLatch(1);
+
+        Thread modifierThread = new Thread(() -> {
+            try {
+                startModifier.await();
+                list.add(100);
+                list.remove(Integer.valueOf(0));
+                list.add(101);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                iterationComplete.countDown();
+            }
+        });
+
+        modifierThread.start();
+        startModifier.countDown();
+
+        List<Integer> collectedElements = new ArrayList<>();
+        while (it.hasNext()) {
+            collectedElements.add(it.next());
+        }
+        iterationComplete.await();
+        modifierThread.join();
+
+        // Then
+        assertEquals(initialCount, collectedElements.size());
+        assertEquals(expectedIteratedElements, collectedElements);
+
+        assertEquals(initialCount + 1, list.size());
+
+        List<Integer> actualModifiedListElements = new ArrayList<>();
+        list.iterator().forEachRemaining(actualModifiedListElements::add);
+
+        List<Integer> expectedModifiedListContent = List.of(1, 2, 3, 4, 100, 101);
+        assertEquals(expectedModifiedListContent, actualModifiedListElements);
+    }
 }
