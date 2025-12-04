@@ -7,6 +7,7 @@ Requirements:
 - Writers have priority over readers (to prevent writer starvation)
 - No thread starvation
 - Must handle interruption properly
+- Supports lock downgrading
 
 Key Concepts: Lock fairness, starvation prevention, reader-writer problem
 

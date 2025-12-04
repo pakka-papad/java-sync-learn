@@ -8,6 +8,7 @@ This repository contains toy implementations for classic synchronization problem
 - [3. Semaphore-based Resource Pool](#3-semaphore-based-resource-pool)
 - [4. CountDownLatch Alternative](#4-countdownlatch-alternative)
 - [5. Copy-On-Write List](#5-copy-on-write-list)
+- [6. Reentrant Read-Write Lock](#6-reentrant-read-write-lock)
 
 
 ---
@@ -163,3 +164,33 @@ Implement a simplified version of `java.util.concurrent.CopyOnWriteArrayList`. T
 - **Trade-offs**:
     - **Pros**: Excellent for read-heavy workloads. Iteration is fast and completely safe from `ConcurrentModificationException`. Reads do not require any locking.
     - **Cons**: Writes are very expensive due to copying the entire array. This makes it unsuitable for write-heavy or even moderately write-intensive scenarios. High memory consumption if the list is large and modified often.
+
+---
+
+## 6. Reentrant Read-Write Lock
+
+Implementation: [`src/main/java/org/example/rwlock`](./src/main/java/org/example/rwlock)
+
+A custom implementation of a reentrant read-write lock, demonstrating core principles and addressing common concurrency challenges.
+
+### Requirements
+- Multiple readers can hold the lock simultaneously
+- Only one writer can hold the lock at a time
+- Writers have priority over readers (to prevent writer starvation)
+- No thread starvation
+- Must handle interruption properly
+- Supports lock downgrading
+- Reentrant for both read and write locks
+
+### Key Concepts
+- Reader-Writer Problem
+- Reentrancy
+- Writer Preference
+- Lock Downgrading
+- `synchronized`, `wait()`, `notifyAll()`
+
+### Implementations
+
+#### a. `ReentrantRWLock.java`
+- **Technique**: Uses Java's intrinsic monitors (`synchronized`, `wait`, `notifyAll`).
+- **Description**: A custom, fair implementation that allows multiple concurrent readers or a single exclusive writer. It correctly handles reentrancy for both read and write locks, supports lock downgrading (acquiring a read lock while holding a write lock), implements writer priority to prevent starvation, and handles thread interruption during acquisition attempts.
