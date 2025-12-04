@@ -39,6 +39,20 @@ public class ReentrantRWLock implements ReadWriteLock {
         return wLock;
     }
 
+    public int getReadHoldCount() {
+        var currentThread = Thread.currentThread();
+        synchronized (this) {
+            return readerHoldCount.getOrDefault(currentThread, 0);
+        }
+    }
+
+    public int getWriteHoldCount() {
+        var currentThread = Thread.currentThread();
+        synchronized (this) {
+            return (Objects.equals(currentThread, currentWriter) ? currentWriterHoldCount : 0);
+        }
+    }
+
     private class ReadLock implements Lock {
 
         private final ReentrantRWLock lock;
