@@ -9,14 +9,17 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class AltCyclicBarrier {
 
+    private static class Generation {
+        boolean isBroken;
+    }
+
     private final int parties;
     private final Runnable barrierAction;
 
     private final Lock lock;
     private final Condition gateOpen;
-    private volatile boolean isBroken;
     private volatile int waitingParties;
-    private int cycleNum;
+    private volatile Generation gen;
 
     AltCyclicBarrier(final int parties) {
         this(parties, null);
@@ -25,20 +28,20 @@ public class AltCyclicBarrier {
     AltCyclicBarrier(final int parties, final Runnable barrierAction) {
         this.parties = parties;
         this.barrierAction = barrierAction;
-        this.cycleNum = 0;
+        this.gen = new Generation();
         this.lock = new ReentrantLock();
         gateOpen = this.lock.newCondition();
     }
 
     private void breakGate() {
-        isBroken = true;
+        gen.isBroken = true;
         waitingParties = 0;
-        cycleNum++;
+        gen = new Generation();
         gateOpen.signalAll();
     }
 
     public int await() throws InterruptedException, BrokenBarrierException {
-        if (isBroken) {
+        if (gen.isBroken) {
             throw new BrokenBarrierException();
         }
         var currentThread = Thread.currentThread();
@@ -57,8 +60,8 @@ public class AltCyclicBarrier {
             var arrivalIndex = waitingParties;
             waitingParties++;
             boolean isLastThread = waitingParties == parties;
-            var myCycle = cycleNum;
-            while (!isBroken && myCycle == cycleNum && !currentThread.isInterrupted()) {
+            var myGen = gen;
+            while (gen.equals(myGen) && !myGen.isBroken && !currentThread.isInterrupted()) {
                 try {
                     gateOpen.await();
                 } catch (InterruptedException ie) {
@@ -67,10 +70,10 @@ public class AltCyclicBarrier {
                     throw ie;
                 }
             }
-            if (isBroken) {
+            if (myGen.isBroken) {
                 throw new BrokenBarrierException();
             }
-            if (currentThread.isInterrupted()) {
+            if (currentThread.isInterrupted() && gen.equals(myGen)) {
                 breakGate();
                 throw new InterruptedException();
             }
@@ -84,7 +87,7 @@ public class AltCyclicBarrier {
                     }
                 }
                 waitingParties = 0;
-                cycleNum++;
+                gen = new Generation();
                 gateOpen.signalAll();
             }
             return arrivalIndex;
@@ -95,7 +98,7 @@ public class AltCyclicBarrier {
 
     public int await(final long timeout, final TimeUnit unit)
             throws InterruptedException, BrokenBarrierException, TimeoutException {
-        if (isBroken) {
+        if (gen.isBroken) {
             throw new BrokenBarrierException();
         }
         var currentThread = Thread.currentThread();
@@ -115,8 +118,8 @@ public class AltCyclicBarrier {
             var arrivalIndex = waitingParties;
             waitingParties++;
             boolean isLastThread = waitingParties == parties;
-            var myCycle = cycleNum;
-            while (!isBroken && myCycle == cycleNum && !currentThread.isInterrupted() &&
+            var myGen = gen;
+            while (gen.equals(myGen) && !myGen.isBroken && !currentThread.isInterrupted() &&
                     System.nanoTime() < waitUpto) {
                 var waitMore = waitUpto - System.nanoTime();
                 if (waitMore <= 0) {
@@ -131,14 +134,14 @@ public class AltCyclicBarrier {
                     throw ie;
                 }
             }
-            if (isBroken) {
+            if (myGen.isBroken) {
                 throw new BrokenBarrierException();
             }
-            if (System.nanoTime() > waitUpto && myCycle == cycleNum) {
+            if (System.nanoTime() > waitUpto && gen.equals(myGen)) {
                 breakGate();
                 throw new TimeoutException();
             }
-            if (currentThread.isInterrupted()) {
+            if (currentThread.isInterrupted() && gen.equals(myGen)) {
                 breakGate();
                 throw new InterruptedException();
             }
@@ -152,7 +155,7 @@ public class AltCyclicBarrier {
                     }
                 }
                 waitingParties = 0;
-                cycleNum++;
+                gen = new Generation();
                 gateOpen.signalAll();
             }
             return arrivalIndex;
@@ -175,7 +178,7 @@ public class AltCyclicBarrier {
     }
 
     public boolean isBroken() {
-        return isBroken;
+        return gen.isBroken;
     }
 
     public int getNumberWaiting() {
