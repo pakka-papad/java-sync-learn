@@ -9,6 +9,7 @@ This repository contains toy implementations for classic synchronization problem
 - [4. CountDownLatch Alternative](#4-countdownlatch-alternative)
 - [5. Copy-On-Write List](#5-copy-on-write-list)
 - [6. Reentrant Read-Write Lock](#6-reentrant-read-write-lock)
+- [7. Reusable Barrier (CyclicBarrier)](#7-reusable-barrier-cyclicbarrier)
 
 
 ---
@@ -194,3 +195,29 @@ A custom implementation of a reentrant read-write lock, demonstrating core princ
 #### a. `ReentrantRWLock.java`
 - **Technique**: Uses Java's intrinsic monitors (`synchronized`, `wait`, `notifyAll`).
 - **Description**: A custom, fair implementation that allows multiple concurrent readers or a single exclusive writer. It correctly handles reentrancy for both read and write locks, supports lock downgrading (acquiring a read lock while holding a write lock), implements writer priority to prevent starvation, and handles thread interruption during acquisition attempts.
+
+---
+
+## 7. Reusable Barrier (CyclicBarrier)
+
+Implementation: [`src/main/java/org/example/cyclicbarrier`](./src/main/java/org/example/cyclicbarrier)
+
+Implement a reusable barrier synchronization mechanism.
+
+### Requirements
+- N threads must wait at barrier
+- Barrier releases all threads once N threads arrive
+- Must be reusable (cyclic)
+- Support optional barrier action
+- Handle interruption and broken barriers
+
+### Key Concepts
+- Barrier synchronization
+- Thread coordination
+- Generation/epoch pattern
+
+### Implementations
+
+#### a. `AltCyclicBarrier.java`
+- **Technique**: Uses `java.util.concurrent.locks.ReentrantLock` with a `Condition` variable and a `Generation` inner class.
+- **Description**: A custom implementation of a cyclic barrier. It uses an explicit `ReentrantLock` and a single `Condition` variable (`gateOpen`) for all threads to wait on. A private `Generation` class is used to manage different cycles of the barrier and to track its 'broken' state, which is essential for correct reusability and handling of interruptions or timeouts.
