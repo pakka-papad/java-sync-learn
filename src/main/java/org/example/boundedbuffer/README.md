@@ -1,6 +1,7 @@
 ## Thread-Safe Bounded Buffer (Producer-Consumer)
 
 Implement a thread-safe bounded buffer that supports multiple producers and consumers.  
+
 Requirements:
 - Fixed capacity buffer
 - Producers block when buffer is full

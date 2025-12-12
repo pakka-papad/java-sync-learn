@@ -1,6 +1,7 @@
 ## Semaphore-based Connection Pool
 
 Implement a database connection pool using Semaphore.  
+
 Requirements:
 - Fixed pool size
 - Acquire/release connections

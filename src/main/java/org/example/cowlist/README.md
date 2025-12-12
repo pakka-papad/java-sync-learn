@@ -1,6 +1,7 @@
 ## Copy-On-Write List
 
 Implement a simplified version of CopyOnWriteArrayList.  
+
 Requirements:
 - Thread-safe reads without locking
 - Copy array on every write operation
