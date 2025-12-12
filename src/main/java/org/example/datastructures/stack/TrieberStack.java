@@ -1,0 +1,62 @@
+package org.example.datastructures.stack;
+
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class TrieberStack<E> {
+
+    private static class LNode<E> {
+        private final E item;
+        private LNode<E> next;
+
+        LNode(E item, LNode<E> next) {
+            this.item = item;
+            this.next = next;
+        }
+    }
+
+    private final AtomicReference<LNode<E>> head;
+    private final AtomicInteger size;
+
+    TrieberStack() {
+        head = new AtomicReference<>(null);
+        size = new AtomicInteger(0);
+    }
+
+    public void push(E item) {
+        final var toSet = new LNode<>(item, null);
+        do {
+            toSet.next = head.get();
+        } while (!head.compareAndSet(toSet.next, toSet));
+        size.incrementAndGet();
+    }
+
+    public E pop() throws NoSuchElementException {
+        LNode<E> currHead = null;
+        do {
+            currHead = head.get();
+            if (currHead == null) {
+                throw new NoSuchElementException();
+            }
+        } while (!head.compareAndSet(currHead, currHead.next));
+        size.decrementAndGet();
+        return currHead.item;
+    }
+
+    public E peek() throws NoSuchElementException {
+        var currHead = head.get();
+        if (currHead == null) {
+            throw new NoSuchElementException();
+        }
+        return currHead.item;
+    }
+
+    public int size() {
+        return size.get();
+    }
+
+    public boolean isEmpty() {
+        return (size.get() <= 0);
+    }
+}
