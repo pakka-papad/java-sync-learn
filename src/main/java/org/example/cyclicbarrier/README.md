@@ -1,6 +1,6 @@
 ## Barrier Synchronization (CyclicBarrier)
 
-Implement a reusable barrier synchronization mechanism.
+Implement a reusable barrier synchronization mechanism.  
 Requirements:
 - N threads must wait at barrier
 - Barrier releases all threads once N threads arrive

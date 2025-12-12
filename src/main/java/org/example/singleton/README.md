@@ -1,6 +1,6 @@
 ## Thread-Safe Singleton
 
-Implement various thread-safe singleton patterns and explain trade-offs.
+Implement various thread-safe singleton patterns and explain trade-offs.  
 Requirements:
 - Implement: 
   - Eager initialization

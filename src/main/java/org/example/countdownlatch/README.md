@@ -1,6 +1,6 @@
 ## CountDownLatch Alternative
 
-Implement a mechanism similar to CountDownLatch using other primitives (no using CountDownLatch itself).
+Implement a mechanism similar to CountDownLatch using other primitives (no using CountDownLatch itself).  
 Requirements:
 - Count down from N to 0
 - Threads can wait for count to reach 0
