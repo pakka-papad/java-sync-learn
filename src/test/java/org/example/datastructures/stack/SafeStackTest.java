@@ -1,5 +1,6 @@
 package org.example.datastructures.stack;
 
+import org.example.datastructures.SampleType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -15,20 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SafeStackTest {
 
-    static class AType {
-        final String a;
-
-        AType(String a) {
-            this.a = a;
-        }
-    }
-
     @Test
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testPushAndPop() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
-        final var item = new AType("test-item");
+        final var stack = new SafeStack<SampleType>();
+        final var item = new SampleType("test-item");
 
         // When
         stack.push(item);
@@ -42,8 +35,8 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testPeek() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
-        final var item = new AType("test-item");
+        final var stack = new SafeStack<SampleType>();
+        final var item = new SampleType("test-item");
 
         // When
         stack.push(item);
@@ -56,12 +49,12 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testSize() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
 
         // When
         final int count = 6;
         for (int i = 0; i < count; i++) {
-            stack.push(new AType("item-" + i));
+            stack.push(new SampleType("item-" + i));
         }
 
         // Then
@@ -72,13 +65,13 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testIsEmpty() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
 
         // When & Then
         assertTrue(stack.isEmpty());
         final int count = 6;
         for (int i = 0; i < count; i++) {
-            stack.push(new AType("item-" + i));
+            stack.push(new SampleType("item-" + i));
         }
         assertFalse(stack.isEmpty());
     }
@@ -87,7 +80,7 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testPopFromEmptyStackThrowsException() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
 
         // When & Then
         assertThrows(NoSuchElementException.class, stack::pop);
@@ -97,7 +90,7 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testPeekFromEmptyStackThrowsException() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
 
         // When & Then
         assertThrows(NoSuchElementException.class, stack::peek);
@@ -107,11 +100,11 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testConcurrentPushAndPop() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
         final int count = 6;
-        final var items = new ArrayList<AType>(count);
+        final var items = new ArrayList<SampleType>(count);
         for (int i = 0; i < count; i++) {
-            items.add(new AType("item-" + i));
+            items.add(new SampleType("item-" + i));
         }
 
         // When
@@ -151,11 +144,11 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testConcurrentPush() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
         final int count = 6;
-        final var items = new ArrayList<AType>(count);
+        final var items = new ArrayList<SampleType>(count);
         for (int i = 0; i < count; i++) {
-            items.add(new AType("item-" + i));
+            items.add(new SampleType("item-" + i));
         }
 
         // When
@@ -197,11 +190,11 @@ class SafeStackTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testConcurrentPop() throws InterruptedException {
         // Given
-        final var stack = new SafeStack<AType>();
+        final var stack = new SafeStack<SampleType>();
         final int count = 6;
-        final var items = new ArrayList<AType>(count);
+        final var items = new ArrayList<SampleType>(count);
         for (int i = 0; i < count; i++) {
-            final var item = new AType("item-" + i);
+            final var item = new SampleType("item-" + i);
             items.add(item);
             stack.push(item);
         }

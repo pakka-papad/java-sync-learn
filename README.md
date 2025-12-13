@@ -10,6 +10,7 @@ This repository contains toy implementations for classic synchronization problem
 - [5. Copy-On-Write List](#5-copy-on-write-list)
 - [6. Reentrant Read-Write Lock](#6-reentrant-read-write-lock)
 - [7. Reusable Barrier (CyclicBarrier)](#7-reusable-barrier-cyclicbarrier)
+- [8. Thread-Safe Stack](#8-thread-safe-stack)
 
 
 ---
@@ -221,3 +222,43 @@ Implement a reusable barrier synchronization mechanism.
 #### a. `AltCyclicBarrier.java`
 - **Technique**: Uses `java.util.concurrent.locks.ReentrantLock` with a `Condition` variable and a `Generation` inner class.
 - **Description**: A custom implementation of a cyclic barrier. It uses an explicit `ReentrantLock` and a single `Condition` variable (`gateOpen`) for all threads to wait on. A private `Generation` class is used to manage different cycles of the barrier and to track its 'broken' state, which is essential for correct reusability and handling of interruptions or timeouts.
+
+---
+
+## 8. Thread-Safe Stack
+
+Implementation: [`src/main/java/org/example/datastructures/stack`](./src/main/java/org/example/datastructures/stack)
+
+Implement a thread-safe stack with multiple approaches, including a classic lock-based version and a lock-free (CAS-based) version.
+
+### Requirements
+- Version A: Using `ReentrantLock` (or `ReadWriteLock`)
+- Version B: Using `AtomicReference` (lock-free)
+- Support: `push()`, `pop()`, `peek()`, `size()`, `isEmpty()`
+- Popping from an empty stack should throw an exception.
+
+### Key Concepts
+- Coarse-grained locking
+- Lock-free programming
+- Compare-and-Set (CAS) operations
+- The ABA Problem
+
+### Implementations
+
+#### a. `SafeStack.java`
+- **Technique**: Uses `java.util.concurrent.locks.ReadWriteLock`.
+- **Description**: A straightforward, thread-safe stack implementation. Write operations (`push`, `pop`) acquire an exclusive write lock, ensuring that only one modification can happen at a time. The read operation (`peek`) acquires a shared read lock, allowing multiple readers to access the stack concurrently as long as no writes are in progress. This provides a good balance of safety and performance for mixed read/write workloads.
+
+#### b. `TrieberStack.java`
+- **Technique**: Uses `java.util.concurrent.atomic.AtomicReference` with a compare-and-set (CAS) loop.
+- **Description**: A lock-free stack implementation based on the algorithm proposed by Treiber. Instead of locks, it uses atomic CAS operations to update the head of the stack in a non-blocking manner. This can offer significant performance benefits under low to moderate contention by avoiding the overhead of thread suspension and context switching associated with locks.
+
+### Challenges with Lock-Free Stacks (`TrieberStack`)
+
+While the lock-free `TrieberStack` can offer better performance, it introduces its own set of complexities:
+
+1.  **The ABA Problem:** This is a classic issue in CAS-based data structures. A thread may read a value `A`, see that it is still `A` later, and perform an operation, unaware that in the intervening time, other threads changed the value from `A` to `B` and then back to `A`. This can lead to data corruption. The provided implementation is susceptible to this. A common solution is to use an `AtomicStampedReference`.
+
+2.  **Inaccurate `size()` Method:** The `size()` method, while using an `AtomicInteger`, is not linearizable with `push()` and `pop()`. An update to the size is not atomically bound to the update of the stack's head. This means `size()` can return a value that does not reflect the "true" state of the stack at a single point in time, though it is eventually consistent.
+
+3.  **High-Contention Performance:** Under very high contention, threads can spend significant time in "spin-loops," repeatedly trying and failing their CAS operations. This wastes CPU cycles and can put pressure on the garbage collector due to the continuous creation of new node objects.
