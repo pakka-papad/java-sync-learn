@@ -6,7 +6,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class SafeStack<E> {
+public class SafeStack<E> implements Stack<E> {
     private final ReadWriteLock lock;
     private final Deque<E> list;
     private volatile int size;
@@ -16,6 +16,7 @@ public class SafeStack<E> {
         list = new ArrayDeque<>();
     }
 
+    @Override
     public void push(E item) {
         var writeLock = lock.writeLock();
         writeLock.lock();
@@ -27,6 +28,7 @@ public class SafeStack<E> {
         }
     }
 
+    @Override
     public E pop() throws NoSuchElementException {
         var writeLock = lock.writeLock();
         writeLock.lock();
@@ -39,6 +41,7 @@ public class SafeStack<E> {
         }
     }
 
+    @Override
     public E peek() throws NoSuchElementException {
         var readLock = lock.readLock();
         readLock.lock();
@@ -49,10 +52,12 @@ public class SafeStack<E> {
         }
     }
 
+    @Override
     public int size() {
         return size;
     }
 
+    @Override
     public boolean isEmpty() {
         return (size <= 0);
     }

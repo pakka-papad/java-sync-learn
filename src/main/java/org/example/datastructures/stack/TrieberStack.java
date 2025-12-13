@@ -4,7 +4,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TrieberStack<E> {
+public class TrieberStack<E> implements Stack<E> {
 
     private static class LNode<E> {
         private final E item;
@@ -24,6 +24,7 @@ public class TrieberStack<E> {
         size = new AtomicInteger(0);
     }
 
+    @Override
     public void push(E item) {
         final var toSet = new LNode<>(item, null);
         do {
@@ -32,6 +33,7 @@ public class TrieberStack<E> {
         size.incrementAndGet();
     }
 
+    @Override
     public E pop() throws NoSuchElementException {
         LNode<E> currHead = null;
         do {
@@ -44,6 +46,7 @@ public class TrieberStack<E> {
         return currHead.item;
     }
 
+    @Override
     public E peek() throws NoSuchElementException {
         var currHead = head.get();
         if (currHead == null) {
@@ -52,10 +55,12 @@ public class TrieberStack<E> {
         return currHead.item;
     }
 
+    @Override
     public int size() {
         return size.get();
     }
 
+    @Override
     public boolean isEmpty() {
         return (size.get() <= 0);
     }
