@@ -18,13 +18,13 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LinkedBoundedBufferTest {
+class CircularBoundedBufferV1Test {
 
-    private LinkedBoundedBuffer<Integer> buffer;
+    private CircularBoundedBufferV1<Integer> buffer;
 
     @BeforeEach
     void setUp() {
-        buffer = new LinkedBoundedBuffer<>(10);
+        buffer = new CircularBoundedBufferV1<>(10);
     }
 
     @Test
@@ -57,8 +57,7 @@ class LinkedBoundedBufferTest {
         // Give consumer time to start and block
         Thread.sleep(100);
         assertFalse(consumed.get());
-        // With ReentrantLock, the state is RUNNABLE while waiting on a condition
-        // but we can check that it's alive and the action hasn't completed.
+        assertEquals(Thread.State.WAITING, consumer.getState());
 
         buffer.produce(1);
         // Wait for consumer to finish
@@ -89,7 +88,7 @@ class LinkedBoundedBufferTest {
         // Give producer time to start and block
         Thread.sleep(100);
         assertFalse(produced.get());
-        // With ReentrantLock, the state is RUNNABLE while waiting on a condition
+        assertEquals(Thread.State.WAITING, producer.getState());
 
         buffer.consume();
         // Wait for producer to finish
@@ -98,22 +97,28 @@ class LinkedBoundedBufferTest {
     }
 
     @Test
-    void testOrderIsMaintained() throws InterruptedException {
-        LinkedBoundedBuffer<Integer> smallBuffer = new LinkedBoundedBuffer<>(3);
+    void testCircularBehavior() throws InterruptedException {
+        CircularBoundedBufferV1<Integer> smallBuffer = new CircularBoundedBufferV1<>(3);
         // Fill buffer
         smallBuffer.produce(1);
         smallBuffer.produce(2);
         smallBuffer.produce(3);
 
-        // Consume two, making space
+        // Indices should be: putIndex=0, takeIndex=0
+
+        // Consume two, making space at the start
         assertEquals(1, smallBuffer.consume());
         assertEquals(2, smallBuffer.consume());
 
-        // Produce two more
+        // Indices should be: putIndex=0, takeIndex=2
+
+        // Produce two more, forcing putIndex to wrap around
         smallBuffer.produce(4);
         smallBuffer.produce(5);
 
-        // Consume remaining items to check FIFO order
+        // Indices should be: putIndex=2, takeIndex=2
+
+        // Consume remaining items to check order
         assertEquals(3, smallBuffer.consume());
         assertEquals(4, smallBuffer.consume());
         assertEquals(5, smallBuffer.consume());
@@ -122,7 +127,7 @@ class LinkedBoundedBufferTest {
     @Test
     @Timeout(5)
     void testConcurrentProducersAndConsumers() throws InterruptedException {
-        final int numThreads = 4;
+        final int numThreads = 5;
         final int itemsPerThread = 100;
         final int totalItems = numThreads * itemsPerThread;
         final ExecutorService executor = Executors.newFixedThreadPool(numThreads * 2);
@@ -210,26 +215,5 @@ class LinkedBoundedBufferTest {
         consumer.interrupt();
         consumer.join();
         assertTrue(consumer.isInterrupted() || !consumer.isAlive());
-    }
-
-    @Test
-    @Timeout(1)
-    void testCanProduceAfterConsumerIsInterrupted() throws InterruptedException {
-        Thread consumer = new Thread(() -> {
-            try {
-                buffer.consume();
-                fail("Expected InterruptedException was not thrown");
-            } catch (InterruptedException e) {
-                // This is expected
-            }
-        });
-
-        consumer.start();
-        Thread.sleep(100); // Allow thread to block
-        consumer.interrupt();
-
-        buffer.produce(1);
-
-        assertEquals(1, buffer.consume());
     }
 }

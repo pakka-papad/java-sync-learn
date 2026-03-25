@@ -1,22 +1,24 @@
 package org.example.boundedbuffer;
 
-import java.util.LinkedList;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class LinkedBoundedBuffer<T> implements BlockingBuffer<T> {
+public class CircularBoundedBufferV2<T> implements BlockingBuffer<T> {
 
-    private final LinkedList<T> queue;
+    private final Object[] buffer;
+    private int takeIndex;
+    private int putIndex;
+    private int count;
     private final Lock lock;
     private final Condition notEmpty;
     private final Condition notFull;
 
-    private final int capacity;
-
-    LinkedBoundedBuffer(int capacity) {
-        this.capacity = capacity;
-        queue = new LinkedList<>();
+    CircularBoundedBufferV2(int capacity) {
+        buffer = new Object[capacity];
+        takeIndex = 0;
+        putIndex = 0;
+        count = 0;
         lock = new ReentrantLock();
         notEmpty = lock.newCondition();
         notFull = lock.newCondition();
@@ -26,10 +28,12 @@ public class LinkedBoundedBuffer<T> implements BlockingBuffer<T> {
     public void produce(T item) throws InterruptedException {
         lock.lock();
         try {
-            while (queue.size() == capacity) {
+            while (count == buffer.length) {
                 notFull.await();
             }
-            queue.addLast(item);
+            buffer[putIndex] = item;
+            putIndex = (putIndex + 1) % buffer.length;
+            count++;
             notEmpty.signal();
         } finally {
             lock.unlock();
@@ -37,13 +41,17 @@ public class LinkedBoundedBuffer<T> implements BlockingBuffer<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public T consume() throws InterruptedException {
         lock.lock();
         try {
-            while (queue.size() == 0) {
+            while (count == 0) {
                 notEmpty.await();
             }
-            var res = queue.pollFirst();
+            var res = (T) buffer[takeIndex];
+            buffer[takeIndex] = null;
+            takeIndex = (takeIndex + 1) % buffer.length;
+            count--;
             notFull.signal();
             return res;
         } finally {
@@ -55,7 +63,7 @@ public class LinkedBoundedBuffer<T> implements BlockingBuffer<T> {
     public int size() {
         lock.lock();
         try {
-            return queue.size();
+            return count;
         } finally {
             lock.unlock();
         }
