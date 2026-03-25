@@ -31,10 +31,16 @@ public class CircularBoundedBufferV2<T> implements BlockingBuffer<T> {
             while (count == buffer.length) {
                 notFull.await();
             }
+            final var prevSize = count;
             buffer[putIndex] = item;
             putIndex = (putIndex + 1) % buffer.length;
             count++;
-            notEmpty.signal();
+            if (prevSize == 0) {
+                notEmpty.signal();
+            }
+            if (count < buffer.length) {
+                notFull.signal();
+            }
         } finally {
             lock.unlock();
         }
@@ -48,11 +54,17 @@ public class CircularBoundedBufferV2<T> implements BlockingBuffer<T> {
             while (count == 0) {
                 notEmpty.await();
             }
+            final var prevSize = count;
             var res = (T) buffer[takeIndex];
             buffer[takeIndex] = null;
             takeIndex = (takeIndex + 1) % buffer.length;
             count--;
-            notFull.signal();
+            if (prevSize == buffer.length) {
+                notFull.signal();
+            }
+            if (count > 0) {
+                notEmpty.signal();
+            }
             return res;
         } finally {
             lock.unlock();
