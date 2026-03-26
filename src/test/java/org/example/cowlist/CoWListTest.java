@@ -29,6 +29,25 @@ public class CoWListTest {
     }
 
     @Test
+    void testAddAtAndGet() {
+        // Given
+        var list = new CoWList<Integer>();
+
+        // When & Then
+        list.addAt(0, 4); // [4]
+        assertEquals(4, list.get(0));
+        list.addAt(0, 5); // [5, 4]
+        list.addAt(1, 6); // [5, 6, 4]
+        list.addAt(3, 8); // [5, 6, 4, 8]
+        list.addAt(3, 9); // [5, 6, 4, 9, 8]
+        assertEquals(5, list.get(0));
+        assertEquals(6, list.get(1));
+        assertEquals(4, list.get(2));
+        assertEquals(9, list.get(3));
+        assertEquals(8, list.get(4));
+    }
+
+    @Test
     void testGetOutOfBounds() {
         // Given
         var list = new CoWList<Integer>();
@@ -227,6 +246,47 @@ public class CoWListTest {
                 throw new RuntimeException(e);
             }
             list.add(nums.getAndIncrement());
+        };
+        var threads = new ArrayList<Thread>(count);
+        for (int i = 0; i < count; i++) {
+            var thread = new Thread(threadAction);
+            thread.start();
+            threads.add(thread);
+        }
+        barrier.countDown();
+        for (int i = 0; i < count; i++) {
+            threads.get(i).join();
+        }
+
+        // Then
+        assertEquals(count, nums.get());
+        assertEquals(count, list.size());
+        var elements = new TreeSet<Integer>();
+        for (int i = 0; i < count; i++) {
+            elements.add(list.get(i));
+        }
+        for (int i = 0; i < count; i++) {
+            assertTrue(elements.contains(i));
+        }
+    }
+
+    @Test
+    @Timeout(5)
+    void testConcurrentAddAt() throws InterruptedException {
+        // Given
+        var list = new CoWList<Integer>();
+
+        // When
+        int count = 4;
+        var nums = new AtomicInteger(0);
+        var barrier = new CountDownLatch(1);
+        Runnable threadAction = () -> {
+            try {
+                barrier.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            list.addAt(0, nums.getAndIncrement());
         };
         var threads = new ArrayList<Thread>(count);
         for (int i = 0; i < count; i++) {

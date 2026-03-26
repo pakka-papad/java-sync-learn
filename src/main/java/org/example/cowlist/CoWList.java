@@ -10,9 +10,23 @@ public class CoWList<T> implements Iterable<T> {
     private volatile Object[] list = new Object[0];
 
     public synchronized void add(T item) {
-        int newLen = list.length + 1;
-        var newList = Arrays.copyOf(list, newLen);
-        newList[newLen - 1] = item;
+        addAt(list.length, item);
+    }
+
+    public synchronized void addAt(int index, T item) {
+        if (index < 0 || index > list.length) {
+            throw new IllegalArgumentException("index must be in range [0, size()]");
+        }
+        var currentList = list;
+        int newLen = currentList.length + 1;
+        Object[] newList = new Object[newLen];
+        if (index > 0) {
+            System.arraycopy(currentList, 0, newList, 0, index);
+        }
+        if (index < currentList.length) {
+            System.arraycopy(currentList, index, newList, index + 1, currentList.length - index);
+        }
+        newList[index] = item;
         list = newList;
     }
 
@@ -53,6 +67,7 @@ public class CoWList<T> implements Iterable<T> {
         list = newList;
     }
 
+    @SuppressWarnings("unchecked")
     public T get(int index) {
         return (T) list[index];
     }
@@ -66,7 +81,7 @@ public class CoWList<T> implements Iterable<T> {
         return new CoWIterator<>(list);
     }
 
-    private class CoWIterator<K> implements Iterator<K> {
+    private static class CoWIterator<K> implements Iterator<K> {
         private final Object[] list;
         private int currPos;
 
@@ -81,6 +96,7 @@ public class CoWList<T> implements Iterable<T> {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public K next() {
             if (!hasNext()) {
                 throw new RuntimeException("No next available");
@@ -94,6 +110,7 @@ public class CoWList<T> implements Iterable<T> {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void forEachRemaining(Consumer<? super K> action) {
             for (int i = currPos; i < list.length; i++) {
                 action.accept((K) list[i]);
