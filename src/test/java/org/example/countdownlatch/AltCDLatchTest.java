@@ -80,11 +80,12 @@ class AltCDLatchTest {
 
         // When
         var t1 = System.nanoTime();
-        latch.await(200, TimeUnit.MILLISECONDS);
+        final var retVal = latch.await(200, TimeUnit.MILLISECONDS);
         var t2 = System.nanoTime();
 
         // Then
         assertEquals(0, latch.getCount());
+        assertTrue(retVal);
         assertTrue(t2 - t1 <= TimeUnit.MILLISECONDS.toNanos(100));
     }
 
@@ -100,9 +101,10 @@ class AltCDLatchTest {
         Runnable waiterAction = () -> {
             try {
                 var t1 = System.nanoTime();
-                latch.await(400, TimeUnit.MILLISECONDS);
+                final var retVal = latch.await(400, TimeUnit.MILLISECONDS);
                 var t2 = System.nanoTime();
                 timeTake.set(t2 - t1);
+                assertTrue(retVal);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -132,9 +134,10 @@ class AltCDLatchTest {
         Runnable waiterAction = () -> {
             try {
                 var t1 = System.nanoTime();
-                latch.await(400, TimeUnit.MILLISECONDS);
+                final var retVal = latch.await(400, TimeUnit.MILLISECONDS);
                 var t2 = System.nanoTime();
                 timeTake.set(t2 - t1);
+                assertFalse(retVal);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

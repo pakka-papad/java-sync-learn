@@ -23,7 +23,7 @@ public class AltCDLatch {
         if (getCount() <= 0) {
             return;
         }
-        lock.lock();
+        lock.lockInterruptibly();
         try {
             while (count > 0) {
                 isOpen.await();
@@ -33,20 +33,25 @@ public class AltCDLatch {
         }
     }
 
-    public void await(long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         if (getCount() <= 0) {
-            return;
+            return true;
         }
         long waitUptoNano = unit.toNanos(timeout) + System.nanoTime();
-        lock.lock();
+        if (!lock.tryLock(waitUptoNano - System.nanoTime(), TimeUnit.NANOSECONDS)) {
+            return (getCount() <= 0);
+        }
         try {
             while (count > 0 && System.nanoTime() < waitUptoNano) {
                 long waitMore = waitUptoNano - System.nanoTime();
-                isOpen.await(waitMore, TimeUnit.NANOSECONDS);
+                if (!isOpen.await(waitMore, TimeUnit.NANOSECONDS)) {
+                    return (getCount() <= 0);
+                }
             }
         } finally {
             lock.unlock();
         }
+        return true;
     }
 
     public void countDown() {
