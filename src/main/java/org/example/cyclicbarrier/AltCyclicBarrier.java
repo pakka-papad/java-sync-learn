@@ -18,7 +18,7 @@ public class AltCyclicBarrier {
 
     private final Lock lock;
     private final Condition gateOpen;
-    private volatile int waitingParties;
+    private int waitingParties;
     private volatile Generation gen;
 
     AltCyclicBarrier(final int parties) {
@@ -36,118 +36,113 @@ public class AltCyclicBarrier {
         gateOpen = this.lock.newCondition();
     }
 
-    private void breakGate() {
-        gen.isBroken = true;
-        waitingParties = 0;
-        gateOpen.signalAll();
-    }
-
-    private void awaitFirstCheck(Thread currentThread) throws BrokenBarrierException, InterruptedException {
-        if (gen.isBroken) {
-            throw new BrokenBarrierException();
+    private void doBarrierAction() {
+        if (barrierAction == null) {
+            return;
         }
-        if (currentThread.isInterrupted()) {
-            currentThread.interrupt();
-            breakGate();
-            throw new InterruptedException();
+        try {
+            barrierAction.run();
+        } catch (Throwable e) {
+            breakBarrier();
+            throw e;
         }
     }
 
-    private void performLastThreadAction() {
-        if (barrierAction != null) {
-            try {
-                barrierAction.run();
-            } catch (Exception e) {
-                breakGate();
-                throw new RuntimeException(e);
-            }
+    private void breakBarrier() {
+        lock.lock();
+        try {
+            waitingParties = 0;
+            gen.isBroken = true;
+            gateOpen.signalAll();
+        } finally {
+            lock.unlock();
         }
+    }
+
+    private void nextGeneration() {
         waitingParties = 0;
         gen = new Generation();
         gateOpen.signalAll();
     }
 
     public int await() throws InterruptedException, BrokenBarrierException {
-        var currentThread = Thread.currentThread();
-        lock.lock();
+        final var currentThread = Thread.currentThread();
+        if (currentThread.isInterrupted()) {
+            currentThread.interrupt();
+            breakBarrier();
+            throw new InterruptedException();
+        }
         try {
-            awaitFirstCheck(currentThread);
-            var arrivalIndex = waitingParties;
-            waitingParties++;
-            boolean isLastThread = waitingParties == parties;
-            var myGen = gen;
-            if (!isLastThread) {
-                while (gen.equals(myGen) && !myGen.isBroken && !currentThread.isInterrupted()) {
-                    try {
-                        gateOpen.await();
-                    } catch (InterruptedException ie) {
-                        breakGate();
-                        currentThread.interrupt();
-                        throw ie;
-                    }
+            lock.lockInterruptibly();
+            try {
+                final var myGen = gen;
+                final var arrivalIdx = waitingParties;
+                waitingParties++;
+                boolean isFinalThread = (waitingParties == parties);
+                while (!isFinalThread && gen.equals(myGen) && !myGen.isBroken) {
+                    gateOpen.await(); // the outer catch will handle the interruption
                 }
+                if (myGen.isBroken) {
+                    throw new BrokenBarrierException();
+                }
+                if (isFinalThread) {
+                    doBarrierAction();
+                    nextGeneration();
+                }
+                return arrivalIdx;
+            } finally {
+                lock.unlock();
             }
-            if (myGen.isBroken) {
-                throw new BrokenBarrierException();
-            }
-            if (currentThread.isInterrupted() && gen.equals(myGen)) {
-                breakGate();
-                throw new InterruptedException();
-            }
-            if (isLastThread) {
-                performLastThreadAction();
-            }
-            return arrivalIndex;
-        } finally {
-            lock.unlock();
+        } catch (InterruptedException e) {
+            breakBarrier();
+            currentThread.interrupt();
+            throw new InterruptedException();
         }
     }
 
     public int await(final long timeout, final TimeUnit unit)
             throws InterruptedException, BrokenBarrierException, TimeoutException {
-        var currentThread = Thread.currentThread();
-        var waitUpto = System.nanoTime() + unit.toNanos(timeout);
-        lock.lock();
+        final var waitUptoNano = unit.toNanos(timeout) + System.nanoTime();
+        final var currentThread = Thread.currentThread();
+        if (currentThread.isInterrupted()) {
+            currentThread.interrupt();
+            breakBarrier();
+            throw new InterruptedException();
+        }
         try {
-            awaitFirstCheck(currentThread);
-            var arrivalIndex = waitingParties;
-            waitingParties++;
-            boolean isLastThread = waitingParties == parties;
-            var myGen = gen;
-            if (!isLastThread) {
-                while (gen.equals(myGen) && !myGen.isBroken && !currentThread.isInterrupted() &&
-                        System.nanoTime() < waitUpto) {
-                    var waitMore = waitUpto - System.nanoTime();
-                    if (waitMore <= 0) {
-                        breakGate();
-                        throw new TimeoutException();
-                    }
-                    try {
-                        gateOpen.await(waitMore, TimeUnit.NANOSECONDS);
-                    } catch (InterruptedException ie) {
-                        breakGate();
-                        currentThread.interrupt();
-                        throw ie;
-                    }
-                }
-            }
-            if (myGen.isBroken) {
-                throw new BrokenBarrierException();
-            }
-            if (System.nanoTime() > waitUpto && gen.equals(myGen)) {
-                breakGate();
+            long waitForLock = waitUptoNano - System.nanoTime();
+            if (waitForLock <= 0 || !lock.tryLock(waitForLock, TimeUnit.NANOSECONDS)) {
+                breakBarrier();
                 throw new TimeoutException();
             }
-            if (currentThread.isInterrupted() && gen.equals(myGen)) {
-                breakGate();
-                throw new InterruptedException();
+            try {
+                final var myGen = gen;
+                final var arrivalIdx = waitingParties;
+                waitingParties++;
+                boolean isFinalThread = (waitingParties == parties);
+                while (!isFinalThread && gen.equals(myGen) && !myGen.isBroken) {
+                    long waitMore = waitUptoNano - System.nanoTime();
+                    // the outer catch will handle the interruption
+                    if (waitMore <= 0 || !gateOpen.await(waitMore, TimeUnit.NANOSECONDS)) {
+                        breakBarrier();
+                        throw new TimeoutException();
+                    }
+                }
+                if (myGen.isBroken) {
+                    throw new BrokenBarrierException();
+                }
+                if (isFinalThread) {
+                    doBarrierAction();
+                    nextGeneration();
+                }
+                return arrivalIdx;
+            } finally {
+                lock.unlock();
             }
-            if (isLastThread) {
-                performLastThreadAction();
-            }
-            return arrivalIndex;
-        } finally {
-            lock.unlock();
+        } catch (InterruptedException e) {
+            breakBarrier();
+            currentThread.interrupt();
+            throw new InterruptedException();
         }
     }
 
@@ -158,7 +153,7 @@ public class AltCyclicBarrier {
     public void reset() {
         lock.lock();
         try {
-            breakGate();
+            breakBarrier();
             gen = new Generation();
         } finally {
             lock.unlock();
