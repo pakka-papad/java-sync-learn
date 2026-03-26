@@ -53,7 +53,7 @@ public class ReentrantRWLock implements ReadWriteLock {
         }
     }
 
-    private class ReadLock implements Lock {
+    private static class ReadLock implements Lock {
 
         private final ReentrantRWLock lock;
 
@@ -64,6 +64,10 @@ public class ReentrantRWLock implements ReadWriteLock {
         private boolean canBecomeReader(Thread currentThread) {
             if (Objects.equals(currentThread, lock.currentWriter)) {
                 // To support lock downgrade
+                return true;
+            }
+            if (lock.readerHoldCount.containsKey(currentThread)) {
+                // Allow reentrancy for readers
                 return true;
             }
             return lock.currentWriter == null && lock.writers.isEmpty();
@@ -93,11 +97,7 @@ public class ReentrantRWLock implements ReadWriteLock {
             final var currentThread = Thread.currentThread();
             synchronized (lock) {
                 while (!canBecomeReader(currentThread)) {
-                    try {
-                        lock.wait();
-                    } catch (InterruptedException ie) {
-                        throw new InterruptedException(ie.getMessage());
-                    }
+                    lock.wait();
                 }
                 lock.readerHoldCount.put(currentThread, lock.readerHoldCount.getOrDefault(currentThread, 0) + 1);
             }
@@ -122,15 +122,12 @@ public class ReentrantRWLock implements ReadWriteLock {
             synchronized (lock) {
                 while (!canBecomeReader(currentThread)) {
                     var waitForNano = waitUptoNano - System.nanoTime();
-                    var waitForMilli = TimeUnit.NANOSECONDS.toMillis(waitForNano);
-                    if (waitForMilli <= 0) {
+                    if (waitForNano <= 0) {
                         return false;
                     }
-                    try {
-                        lock.wait(waitForMilli);
-                    } catch (InterruptedException ie) {
-                        throw new InterruptedException(ie.getMessage());
-                    }
+                    final var waitForMilli = TimeUnit.NANOSECONDS.toMillis(waitForNano);
+                    final var remainNano = waitForNano - TimeUnit.MILLISECONDS.toNanos(waitForMilli);
+                    lock.wait(waitForMilli, (int) remainNano);
                 }
                 lock.readerHoldCount.put(currentThread, lock.readerHoldCount.getOrDefault(currentThread, 0) + 1);
                 return true;
@@ -162,7 +159,7 @@ public class ReentrantRWLock implements ReadWriteLock {
         }
     }
 
-    private class WriteLock implements Lock {
+    private static class WriteLock implements Lock {
 
         private final ReentrantRWLock lock;
 
@@ -175,7 +172,7 @@ public class ReentrantRWLock implements ReadWriteLock {
         }
 
         private boolean canBecomeWriter(Thread currentThread) {
-            return ((isCurrentThreadAtHead(currentThread) && lock.currentWriter == null && readerHoldCount.isEmpty()) ||
+            return ((isCurrentThreadAtHead(currentThread) && lock.currentWriter == null && lock.readerHoldCount.isEmpty()) ||
                     (lock.currentWriter == currentThread));
         }
 
@@ -199,10 +196,6 @@ public class ReentrantRWLock implements ReadWriteLock {
                 if (interrupted) {
                     currentThread.interrupt();
                 }
-                if (lock.currentWriter == currentThread) {
-                    lock.currentWriterHoldCount++;
-                    return;
-                }
                 // currentThread is at head, lock.currentWriter == null holds, lock.readerHoldCount is empty
                 lock.writers.poll();
                 lock.currentWriter = currentThread;
@@ -224,12 +217,8 @@ public class ReentrantRWLock implements ReadWriteLock {
                         lock.wait();
                     } catch (InterruptedException ie) {
                         lock.writers.remove(currentThread);
-                        throw new InterruptedException(ie.getMessage());
+                        throw ie;
                     }
-                }
-                if (lock.currentWriter == currentThread) {
-                    lock.currentWriterHoldCount++;
-                    return;
                 }
                 // currentThread is at head, lock.currentWriter == null holds, lock.readerHoldCount is empty
                 lock.writers.poll();
@@ -264,24 +253,21 @@ public class ReentrantRWLock implements ReadWriteLock {
                     lock.currentWriterHoldCount++;
                     return true;
                 }
-                writers.add(currentThread);
+                lock.writers.add(currentThread);
                 while (!canBecomeWriter(currentThread)) {
                     var waitForNano = waitUptoNano - System.nanoTime();
-                    var waitForMilli = TimeUnit.NANOSECONDS.toMillis(waitForNano);
-                    if (waitForMilli <= 0) {
+                    if (waitForNano <= 0) {
                         lock.writers.remove(currentThread);
                         return false;
                     }
+                    final var waitForMilli = TimeUnit.NANOSECONDS.toMillis(waitForNano);
+                    final var remainNano = waitForNano - TimeUnit.MILLISECONDS.toNanos(waitForMilli);
                     try {
-                        lock.wait(waitForMilli);
+                        lock.wait(waitForMilli, (int) remainNano);
                     } catch (InterruptedException ie) {
                         lock.writers.remove(currentThread);
-                        throw new InterruptedException(ie.getMessage());
+                        throw ie;
                     }
-                }
-                if (lock.currentWriter == currentThread) {
-                    lock.currentWriterHoldCount++;
-                    return true;
                 }
                 // currentThread is at head, lock.currentWriter == null holds, lock.readerHoldCount is empty
                 lock.writers.poll();
