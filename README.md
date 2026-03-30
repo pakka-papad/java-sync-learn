@@ -11,6 +11,7 @@ This repository contains toy implementations for classic synchronization problem
 - [6. Reentrant Read-Write Lock](#6-reentrant-read-write-lock)
 - [7. Reusable Barrier (CyclicBarrier)](#7-reusable-barrier-cyclicbarrier)
 - [8. Thread-Safe Stack](#8-thread-safe-stack)
+- [9. Parallel Merge Sort](#9-parallel-merge-sort)
 
 
 ---
@@ -266,3 +267,29 @@ While the lock-free `TrieberStack` can offer better performance, it introduces i
 2.  **Inaccurate `size()` Method:** The `size()` method, while using an `AtomicInteger`, is not linearizable with `push()` and `pop()`. An update to the size is not atomically bound to the update of the stack's head. This means `size()` can return a value that does not reflect the "true" state of the stack at a single point in time, though it is eventually consistent.
 
 3.  **High-Contention Performance:** Under very high contention, threads can spend significant time in "spin-loops," repeatedly trying and failing their CAS operations. This wastes CPU cycles and can put pressure on the garbage collector due to the continuous creation of new node objects.
+
+---
+
+## 9. Parallel Merge Sort
+
+Implementation: [`src/main/java/org/example/mergesort`](./src/main/java/org/example/mergesort)
+
+Implement a parallel version of the Merge Sort algorithm using Java's Fork/Join framework to leverage multi-core processors for faster sorting of large datasets.
+
+### Requirements
+- Sort an array of elements that implement `Comparable`.
+- Utilize `ForkJoinPool` and `RecursiveAction` for parallel decomposition.
+- Implement a threshold to switch to sequential sorting for small sub-arrays to minimize task creation overhead.
+- Ensure the operation is synchronous and thread-safe.
+
+### Key Concepts
+- Divide and Conquer
+- Fork/Join Framework
+- Work-Stealing Algorithm
+- Threshold-based Optimization
+
+### Implementations
+
+#### a. `ParallelMergeSort.java`
+- **Technique**: Uses `RecursiveAction` with `invokeAll()` for parallel task distribution.
+- **Description**: This implementation recursively divides the array into sub-problems. If the size of a sub-array falls below a `LINEAR_THRESHOLD`, it defaults to `Arrays.sort()` for efficiency. Otherwise, it forks parallel tasks to sort the halves and then merges them. An auxiliary array is used during the merge phase to maintain stability and performance.
