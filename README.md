@@ -34,13 +34,17 @@ Implement a thread-safe bounded buffer that supports multiple producers and cons
 
 ### Implementations
 
-#### a. `CircularBoundedBuffer.java`
+#### a. `CircularBoundedBufferV1.java`
 - **Technique**: Uses `synchronized` methods with `wait()` and `notifyAll()`.
 - **Description**: A simple array-based circular buffer. Intrinsic locks on the object itself are used to ensure mutual exclusion. `wait()` is called to block producers/consumers, and `notifyAll()` is used to wake them up when the buffer state changes.
 
-#### b. `LinkedBoundedBuffer.java`
+#### b. `CircularBoundedBufferV2.java`
 - **Technique**: Uses `java.util.concurrent.locks.ReentrantLock` with `Condition` variables.
 - **Description**: A more flexible implementation using explicit locks. It uses two separate `Condition` objects (`notFull` and `notEmpty`) which is more efficient than `notifyAll()` because it allows waking up only the relevant threads (e.g., waking up a producer when space becomes available, not a consumer).
+
+#### c. `CircularBoundedBufferV3.java`
+- **Technique**: Uses two separate `ReentrantLock`s (`putLock` and `takeLock`) and an `AtomicInteger` for the count.
+- **Description**: An optimized implementation that uses separate locks for putting and taking items. This allows a producer and a consumer to operate concurrently as long as the buffer is neither full nor empty, reducing lock contention and potentially increasing throughput on multi-processor systems. It uses `AtomicInteger` to manage the count across the two lock domains safely.
 
 ---
 

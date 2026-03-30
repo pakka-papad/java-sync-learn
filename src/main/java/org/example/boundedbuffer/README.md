@@ -10,5 +10,6 @@ Requirements:
 - Implement using: 
   - synchronized/wait/notify
   - ReentrantLock with Condition
+  - Dual locks
 
 Key Concepts: Wait/notify, condition variables, producer-consumer pattern
