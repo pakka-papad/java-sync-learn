@@ -12,6 +12,7 @@ This repository contains toy implementations for classic synchronization problem
 - [7. Reusable Barrier (CyclicBarrier)](#7-reusable-barrier-cyclicbarrier)
 - [8. Thread-Safe Stack](#8-thread-safe-stack)
 - [9. Parallel Merge Sort](#9-parallel-merge-sort)
+- [10. Exchanger Pattern](#10-exchanger-pattern)
 
 
 ---
@@ -293,3 +294,30 @@ Implement a parallel version of the Merge Sort algorithm using Java's Fork/Join 
 #### a. `ParallelMergeSort.java`
 - **Technique**: Uses `RecursiveAction` with `invokeAll()` for parallel task distribution.
 - **Description**: This implementation recursively divides the array into sub-problems. If the size of a sub-array falls below a `LINEAR_THRESHOLD`, it defaults to `Arrays.sort()` for efficiency. Otherwise, it forks parallel tasks to sort the halves and then merges them. An auxiliary array is used during the merge phase to maintain stability and performance.
+
+---
+
+## 10. Exchanger Pattern
+
+Implementation: [`src/main/java/org/example/exchanger`](./src/main/java/org/example/exchanger)
+
+Implement a synchronization point where threads can pair and swap elements within pairs.
+
+### Requirements
+- Exactly two parties must rendezvous to exchange data.
+- The first party to arrive blocks until the second party arrives.
+- Support both blocking `exchange()` and timed `tryExchange()`.
+- Robustly handle thread interruption and timeouts.
+- Ensure state cleanup (avoid "ghost" participants) on cancellation.
+
+### Key Concepts
+- Rendezvous
+- Pairing / Pairing-based coordination
+- Generation/Epoch management
+- State cleanup and robust error handling
+
+### Implementations
+
+#### a. `Exchanger.java`
+- **Technique**: Uses a `Generation` object to encapsulate the state of a single pairing attempt, combined with `synchronized`, `wait()`, and `notifyAll()`.
+- **Description**: A simple implementation of a 2-party exchanger. It uses a "Generation" pattern where a fresh object is created for each new pair of participants. This simplifies state management and ensures that participants from different "epochs" don't interfere with each other. It includes `finally` blocks to ensure that if a thread leaves early (due to timeout or interruption), it cleans up its presence so that subsequent threads don't attempt to pair with a missing partner.
