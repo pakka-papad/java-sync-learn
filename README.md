@@ -13,7 +13,7 @@ This repository contains toy implementations for classic synchronization problem
 - [8. Thread-Safe Stack](#8-thread-safe-stack)
 - [9. Parallel Merge Sort](#9-parallel-merge-sort)
 - [10. Exchanger Pattern](#10-exchanger-pattern)
-
+- [11. Parallel Aggregate Operations (Map-Reduce)](#11-parallel-aggregate-operations-map-reduce)
 
 ---
 
@@ -321,3 +321,31 @@ Implement a synchronization point where threads can pair and swap elements withi
 #### a. `Exchanger.java`
 - **Technique**: Uses a `Generation` object to encapsulate the state of a single pairing attempt, combined with `synchronized`, `wait()`, and `notifyAll()`.
 - **Description**: A simple implementation of a 2-party exchanger. It uses a "Generation" pattern where a fresh object is created for each new pair of participants. This simplifies state management and ensures that participants from different "epochs" don't interfere with each other. It includes `finally` blocks to ensure that if a thread leaves early (due to timeout or interruption), it cleans up its presence so that subsequent threads don't attempt to pair with a missing partner.
+
+---
+
+## 11. Parallel Aggregate Operations (Map-Reduce)
+
+Implementation: [`src/main/java/org/example/mapreduce`](./src/main/java/org/example/mapreduce)
+
+Implement parallel aggregate operations (map-reduce style) on a collection using the Fork/Join framework and Spliterators.
+
+### Requirements
+- Split collections into chunks for parallel processing.
+- Apply a transformation (map) and a combination function (reduce) in parallel.
+- Handle different data sources efficiently using `Spliterator`.
+- Implement a sequential threshold to optimize performance for small datasets.
+- Correctly handle the `identity` element in parallel reductions.
+
+### Key Concepts
+- Map-Reduce Pattern
+- `java.util.Spliterator` for data partitioning
+- `RecursiveTask` for parallel decomposition
+- Work-Stealing Algorithm
+- Associativity in reduction
+
+### Implementations
+
+#### a. `MapReduce.java`
+- **Technique**: Uses `RecursiveTask` with `Spliterator.trySplit()` and a fixed `SEQ_THRESHOLD`.
+- **Description**: This implementation provides a generic `run()` method that performs a parallel map-reduce operation. It leverages the `Spliterator` API to decompose any `Iterable` source into tasks that can be executed in the `ForkJoinPool`. To ensure high performance, it switches to a sequential scan when the estimated size of a chunk falls below a threshold. The reduction logic is carefully designed to apply the `identity` element only once, ensuring mathematical correctness across parallel branches.
