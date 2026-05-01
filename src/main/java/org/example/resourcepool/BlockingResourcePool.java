@@ -40,11 +40,14 @@ public class BlockingResourcePool<T> implements ResourcePool<T> {
 
     @Override
     public void release(T resource) throws InterruptedException {
-        if (!resourceValidator.test(resource)) {
-            resource = resourceFactory.get();
+        try {
+            if (!resourceValidator.test(resource)) {
+                resource = resourceFactory.get();
+            }
+            resources.offer(resource);
+        } finally {
+            semaphore.release();
         }
-        resources.offer(resource);
-        semaphore.release();
     }
 
     @Override
